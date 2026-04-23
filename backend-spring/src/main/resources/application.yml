@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: deducto-backend
+
+  autoconfigure:
+    # Avoids dev-only "Using generated security password" when we use a custom SecurityFilterChain
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      # Fail fast with a clear message (helps debug Supabase auth / network issues)
+      connection-timeout: 20000
+      maximum-pool-size: 5
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+    properties:
+      # Flat keys so Spring passes them through to Hibernate reliably
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+      hibernate.boot.allow_jdbc_metadata_access: false
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: ${LLM_MODEL:gpt-4o}
+
+server:
+  port: 8080
+  error:
+    # Helps debug 5xx in dev (default hides exception message in JSON)
+    include-message: always
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET}
+    expiration-ms: 86400000
+
+aws:
+  s3:
+    bucket: ${S3_BUCKET:}
+  region: ${AWS_REGION:us-west-2}
+  access-key: ${AWS_ACCESS_KEY_ID:}
+  secret-key: ${AWS_SECRET_ACCESS_KEY:}

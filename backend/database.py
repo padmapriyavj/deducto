@@ -2,8 +2,7 @@ import os
 from functools import lru_cache
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import DeclarativeBase
 from supabase import Client, create_client
 
 load_dotenv()

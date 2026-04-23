@@ -12,3 +12,11 @@ __pycache__/
 .env
 .cursor/
 .pytest_cache/
+
+# Spring Boot
+backend-spring/target/
+backend-spring/*.iml
+backend-spring/.idea/
+*.class
+*.jar
+*.war

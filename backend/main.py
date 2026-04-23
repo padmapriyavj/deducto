@@ -89,8 +89,6 @@ def read_items():
         return {"error": "Supabase is not configured"}
     try:
         response = supabase.table("shop_items").select("*", count="exact").execute()
-        print(response.count)
-        print("response", response)
         return response.data
     except APIError as e:
         return {"error": e.message, "details": e.details}
