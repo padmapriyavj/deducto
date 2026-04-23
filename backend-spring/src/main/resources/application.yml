@@ -2,6 +2,11 @@ spring:
   application:
     name: deducto-backend
 
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 55MB
+
   autoconfigure:
     # Avoids dev-only "Using generated security password" when we use a custom SecurityFilterChain
     exclude:
