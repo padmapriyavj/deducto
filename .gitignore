@@ -1,0 +1,14 @@
+.DS_Store
+.claude/
+.vscode/
+*.md
+*.txt
+*.env
+.venv/
+node_modules/
+__pycache__/
+*.py[cod]
+.Python
+.env
+.cursor/
+.pytest_cache/

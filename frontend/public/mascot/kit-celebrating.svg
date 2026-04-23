@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Kit the fox, celebrating">
+  <g transform="translate(120, 120)">
+    <path d="M-68,-40 L-95,-110 L-38,-58 Z" fill="#E87A3D"/>
+    <path d="M-68,-48 L-85,-90 L-46,-63 Z" fill="#F4B8A8"/>
+    <path d="M68,-40 L95,-110 L38,-58 Z" fill="#E87A3D"/>
+    <path d="M68,-48 L85,-90 L46,-63 Z" fill="#F4B8A8"/>
+    <ellipse cx="0" cy="0" rx="85" ry="78" fill="#E87A3D"/>
+    <ellipse cx="-62" cy="32" rx="22" ry="28" fill="#FFF5E6"/>
+    <ellipse cx="62" cy="32" rx="22" ry="28" fill="#FFF5E6"/>
+    <ellipse cx="0" cy="38" rx="52" ry="38" fill="#FFF5E6"/>
+    <path d="M-36,-8 Q-28,-20 -20,-8" stroke="#1A1A1A" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M20,-8 Q28,-20 36,-8" stroke="#1A1A1A" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <ellipse cx="0" cy="27" rx="9" ry="6.5" fill="#1A1A1A"/>
+    <path d="M0,33 L0,44" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" fill="none"/>
+    <path d="M-11,45 Q0,62 11,45 Q6,55 0,55 Q-6,55 -11,45 Z" fill="#1A1A1A"/>
+    <path d="M-4,51 Q0,56 4,51 L4,55 Q0,57 -4,55 Z" fill="#F4B8A8"/>
+    <path d="M-90,-40 L-88,-46 L-86,-40 L-80,-42 L-86,-38 L-82,-34 L-86,-36 Z" fill="#F5B841"/>
+    <path d="M84,-30 L86,-36 L88,-30 L94,-32 L88,-28 L94,-24 L88,-26 Z" fill="#F5B841"/>
+    <circle cx="-100" cy="10" r="3" fill="#F5B841"/>
+    <circle cx="98" cy="20" r="3" fill="#F5B841"/>
+  </g>
+</svg>

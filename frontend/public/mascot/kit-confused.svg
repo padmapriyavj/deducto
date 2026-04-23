@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Kit the fox, confused">
+  <g transform="translate(120, 120)">
+    <path d="M-68,-40 L-95,-110 L-38,-58 Z" fill="#E87A3D"/>
+    <path d="M-68,-48 L-85,-90 L-46,-63 Z" fill="#F4B8A8"/>
+    <path d="M68,-40 L95,-110 L38,-58 Z" fill="#E87A3D"/>
+    <path d="M68,-48 L85,-90 L46,-63 Z" fill="#F4B8A8"/>
+    <ellipse cx="0" cy="0" rx="85" ry="78" fill="#E87A3D"/>
+    <ellipse cx="-62" cy="32" rx="22" ry="28" fill="#FFF5E6"/>
+    <ellipse cx="62" cy="32" rx="22" ry="28" fill="#FFF5E6"/>
+    <ellipse cx="0" cy="38" rx="52" ry="38" fill="#FFF5E6"/>
+    <ellipse cx="-28" cy="-5" rx="10" ry="12" fill="#1A1A1A"/>
+    <circle cx="-25" cy="-9" r="3.5" fill="#FFFFFF"/>
+    <path d="M18,-5 L38,-5" stroke="#1A1A1A" stroke-width="2.5" stroke-linecap="round"/>
+    <ellipse cx="0" cy="27" rx="9" ry="6.5" fill="#1A1A1A"/>
+    <path d="M0,33 L0,44" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" fill="none"/>
+    <path d="M-10,49 L-5,46 L0,49 L5,46 L10,49" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <text x="64" y="-38" font-family="system-ui, sans-serif" font-size="34" font-weight="700" fill="#E87A3D">?</text>
+  </g>
+</svg>

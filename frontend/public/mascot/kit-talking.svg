@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Kit the fox mascot, speaking">
+  <style>
+    .kit-body { animation: bob 2.8s ease-in-out infinite; }
+    .kit-eye { animation: blink 4.2s infinite; transform-origin: center; transform-box: fill-box; }
+    .mouth-closed { animation: mc 0.42s infinite; }
+    .mouth-open { opacity: 0; animation: mo 0.42s infinite; }
+    .ear-l { animation: twitchL 5.4s infinite; transform-origin: 85% 95%; transform-box: fill-box; }
+    .ear-r { animation: twitchR 5.4s infinite 2.7s; transform-origin: 15% 95%; transform-box: fill-box; }
+    .wave { opacity: 0; animation: wave 1s infinite; transform-origin: center; transform-box: fill-box; }
+    @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+    @keyframes blink { 0%,92%,100%{transform:scaleY(1)} 95%,97%{transform:scaleY(0.1)} }
+    @keyframes mc { 0%,45%,100%{opacity:1} 55%,95%{opacity:0} }
+    @keyframes mo { 0%,45%,100%{opacity:0} 55%,95%{opacity:1} }
+    @keyframes twitchL { 0%,88%,100%{transform:rotate(0)} 91%,94%{transform:rotate(-10deg)} }
+    @keyframes twitchR { 0%,88%,100%{transform:rotate(0)} 91%,94%{transform:rotate(10deg)} }
+    @keyframes wave { 0%{opacity:0;transform:scale(0.5)} 40%{opacity:0.6} 100%{opacity:0;transform:scale(1.4)} }
+  </style>
+
+  <g transform="translate(20, 120)">
+    <circle class="wave" cx="0" cy="0" r="10" fill="none" stroke="#E87A3D" stroke-width="2.5"/>
+    <circle class="wave" cx="0" cy="0" r="10" fill="none" stroke="#E87A3D" stroke-width="2.5" style="animation-delay: 0.35s"/>
+  </g>
+  <g transform="translate(220, 120)">
+    <circle class="wave" cx="0" cy="0" r="10" fill="none" stroke="#E87A3D" stroke-width="2.5" style="animation-delay: 0.15s"/>
+    <circle class="wave" cx="0" cy="0" r="10" fill="none" stroke="#E87A3D" stroke-width="2.5" style="animation-delay: 0.5s"/>
+  </g>
+
+  <g transform="translate(120, 120)">
+    <g class="kit-body">
+      <g class="ear-l">
+        <path d="M-68,-40 L-95,-110 L-38,-58 Z" fill="#E87A3D"/>
+        <path d="M-68,-48 L-85,-90 L-46,-63 Z" fill="#F4B8A8"/>
+      </g>
+      <g class="ear-r">
+        <path d="M68,-40 L95,-110 L38,-58 Z" fill="#E87A3D"/>
+        <path d="M68,-48 L85,-90 L46,-63 Z" fill="#F4B8A8"/>
+      </g>
+
+      <ellipse cx="0" cy="0" rx="85" ry="78" fill="#E87A3D"/>
+      <ellipse cx="-62" cy="32" rx="22" ry="28" fill="#FFF5E6"/>
+      <ellipse cx="62" cy="32" rx="22" ry="28" fill="#FFF5E6"/>
+      <ellipse cx="0" cy="38" rx="52" ry="38" fill="#FFF5E6"/>
+
+      <g class="kit-eye">
+        <ellipse cx="-28" cy="-5" rx="8.5" ry="10.5" fill="#1A1A1A"/>
+        <circle cx="-25" cy="-9" r="3" fill="#FFFFFF"/>
+      </g>
+      <g class="kit-eye" style="animation-delay: 0.05s">
+        <ellipse cx="28" cy="-5" rx="8.5" ry="10.5" fill="#1A1A1A"/>
+        <circle cx="31" cy="-9" r="3" fill="#FFFFFF"/>
+      </g>
+
+      <ellipse cx="0" cy="27" rx="9" ry="6.5" fill="#1A1A1A"/>
+      <path d="M0,33 L0,44" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+      <path class="mouth-closed" d="M-14,47 Q0,60 14,47" stroke="#1A1A1A" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+      <g class="mouth-open">
+        <ellipse cx="0" cy="52" rx="13" ry="10" fill="#1A1A1A"/>
+        <path d="M-8,58 Q0,64 8,58 Q4,62 0,62 Q-4,62 -8,58 Z" fill="#F4B8A8"/>
+      </g>
+    </g>
+  </g>
+</svg>

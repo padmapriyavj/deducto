@@ -1,0 +1,248 @@
+openapi: 3.0.3
+info:
+  title: Deductible API
+  version: 0.0.1
+  description: >
+    Stub until FastAPI exposes real paths. Regenerate with `npm run generate:api`
+    or `OPENAPI_URL=http://127.0.0.1:8000/openapi.json npm run generate:api`.
+
+paths:
+  /auth/login:
+    post:
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Unauthorized
+  /auth/signup:
+    post:
+      operationId: authSignup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /auth/me:
+    get:
+      operationId: authMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPublic'
+
+  /quiz-rooms:
+    post:
+      operationId: createQuizRoom
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuizRoomRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateQuizRoomResponse'
+
+  /quiz-rooms/{room_id}:
+    get:
+      operationId: getQuizRoom
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: room_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz room snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizRoomPublic'
+
+  /shop/catalog:
+    get:
+      operationId: getShopCatalog
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Purchasable items for the student shop
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShopCatalogItem'
+
+  /space/layouts/{layout_id}:
+    get:
+      operationId: getSpaceLayout
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: layout_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Slot layout for the student space
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceLayout'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    SignupRequest:
+      type: object
+      required: [email, password, display_name, role]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        display_name:
+          type: string
+        role:
+          type: string
+          enum: [student, professor]
+    UserPublic:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+        display_name:
+          type: string
+        role:
+          type: string
+          enum: [student, professor]
+    AuthResponse:
+      type: object
+      required: [access_token, user]
+      properties:
+        access_token:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserPublic'
+
+    CreateQuizRoomRequest:
+      type: object
+      required: [mode, lesson_id]
+      properties:
+        mode:
+          type: string
+          enum: [solo, duel, tempo]
+        lesson_id:
+          type: string
+
+    CreateQuizRoomResponse:
+      type: object
+      required: [room_id]
+      properties:
+        room_id:
+          type: string
+
+    QuizRoomPublic:
+      type: object
+      properties:
+        room_id:
+          type: string
+        mode:
+          type: string
+          enum: [solo, duel, tempo]
+        current_question_index:
+          type: integer
+
+    ShopCatalogItem:
+      type: object
+      required: [id, name, description, price, category]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: integer
+        category:
+          type: string
+          enum: [decor, desk, plant]
+
+    SpaceSlot:
+      type: object
+      required: [id, label, region]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        region:
+          type: string
+          enum: [wall, floor, desk]
+
+    SpaceLayout:
+      type: object
+      required: [layout_id, title, slots]
+      properties:
+        layout_id:
+          type: string
+        title:
+          type: string
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpaceSlot'
