@@ -8,6 +8,8 @@
 #   export SAMPLE_PDF=/path/to/sample.pdf
 #   ./scripts/phase3-materials-curl-tests.sh
 #
+# Default: the uploaded material is NOT deleted (for Phase 4). Use PHASE3_DELETE=1 to delete it after the test.
+#
 # Or pass course id and pdf path as arguments (same shell can skip export for these two):
 #   export PROF_TOKEN=eyJ...
 #   ./scripts/phase3-materials-curl-tests.sh 15 /path/to/sample.pdf
@@ -79,13 +81,14 @@ curl -sS "${BASE}/api/v1/materials/${MATERIAL_ID}" \
 echo
 
 echo "== 4) Delete material (optional cleanup) =="
-if [ "${PHASE3_DELETE:-1}" = "1" ] && [ -n "$MATERIAL_ID" ] && [ "$MATERIAL_ID" != "null" ]; then
+# Default: skip delete so MATERIAL_ID still exists for Phase 4 (lessons). Set PHASE3_DELETE=1 to remove the row + S3 object.
+if [ "${PHASE3_DELETE:-0}" = "1" ] && [ -n "$MATERIAL_ID" ] && [ "$MATERIAL_ID" != "null" ]; then
   code="$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE \
     "${BASE}/api/v1/materials/${MATERIAL_ID}" \
     -H "Authorization: Bearer ${PHASE3_DELETE_TOKEN:-$PROF_TOKEN}")"
-  echo "DELETE HTTP $code (set PHASE3_DELETE=0 to skip)"
+  echo "DELETE HTTP $code"
 else
-  echo "Skipped (set PHASE3_DELETE=0 to always skip; uses PROF_TOKEN for delete)"
+  echo "Skipped (default). Export PHASE3_DELETE=1 to delete this material after the smoke test."
 fi
 
 echo

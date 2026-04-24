@@ -34,7 +34,11 @@ spring:
 
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY:}
+      # OpenAI: omit OPENAI_BASE_URL (defaults to OpenAI). Groq: https://api.groq.com/openai
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      # GROQ_API_KEY is checked first so a stale OPENAI_API_KEY in .env does not override your Groq key.
+      # For OpenAI-only, set OPENAI_API_KEY and leave GROQ_API_KEY unset/empty.
+      api-key: ${GROQ_API_KEY:${OPENAI_API_KEY:}}
       chat:
         options:
           model: ${LLM_MODEL:gpt-4o}
