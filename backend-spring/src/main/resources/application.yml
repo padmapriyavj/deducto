@@ -51,7 +51,8 @@ server:
 
 security:
   jwt:
-    secret-key: ${JWT_SECRET}
+    # Must match FastAPI's JWT_SECRET_KEY. JWT_SECRET is legacy fallback only.
+    secret-key: ${JWT_SECRET_KEY:${JWT_SECRET:}}
     expiration-ms: 86400000
 
 aws:

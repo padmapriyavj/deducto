@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 
 import { Button } from '@/components/ui/Button'
@@ -13,7 +13,8 @@ import {
   type ConceptItem,
 } from '@/lib/api/intelligenceApi'
 import { queryKeys } from '@/lib/queryKeys'
-import { useLessonQuery } from '@/lib/queries/lessonQueries'
+import { useLessonQuery, useUpdateLessonMutation } from '@/lib/queries/lessonQueries'
+import { useMaterialsQuery } from '@/lib/queries/materialQueries'
 import { useAuthStore } from '@/stores/authStore'
 
 type EditableConcept = { id: string; name: string; description: string }
@@ -31,8 +32,21 @@ export function ConceptReviewPage() {
   const queryClient = useQueryClient()
 
   const lessonQuery = useLessonQuery(Number.isFinite(lessonNumericId) && lessonNumericId > 0 ? lessonNumericId : 0)
+  const materialsQuery = useMaterialsQuery(lessonQuery.data?.course_id ?? 0)
+  const updateLesson = useUpdateLessonMutation(
+    Number.isFinite(lessonNumericId) && lessonNumericId > 0 ? lessonNumericId : 0,
+    lessonQuery.data?.course_id ?? 0,
+  )
 
   const [localConcepts, setLocalConcepts] = useState<EditableConcept[] | null>(null)
+  const [materialChoice, setMaterialChoice] = useState<string>('')
+
+  useEffect(() => {
+    const mid = lessonQuery.data?.material_id
+    if (mid != null) {
+      setMaterialChoice(String(mid))
+    }
+  }, [lessonQuery.data?.material_id])
 
   const conceptsQuery = useQuery({
     queryKey: [...queryKeys.lessonConcepts(lid), token ?? ''],
@@ -106,13 +120,75 @@ export function ConceptReviewPage() {
 
       <PageHeader
         title="Concept review"
-        description={`${lesson.title} — generate or edit concepts, then set weightages for quiz generation.`}
+        description={`${lesson.title} — choose the course material this lesson uses for AI, then generate concepts.`}
         actions={
-          <Button type="button" onClick={() => generate.mutate()} disabled={generate.isPending}>
+          <Button
+            type="button"
+            onClick={() => generate.mutate()}
+            disabled={generate.isPending || !lesson.material_id}
+          >
             {generate.isPending ? 'Generating…' : 'Generate concepts'}
           </Button>
         }
       />
+
+      <Card padding="md" className="mb-6">
+        <h2 className="font-heading text-foreground mb-2 text-lg">Source material</h2>
+        <p className="text-foreground/70 mb-3 text-sm">
+          Concept generation uses the PDF or slides linked to <strong>this lesson</strong> (not only files
+          listed under the course). Pick a processed file from the course, then save.
+        </p>
+        {materialsQuery.isLoading ? (
+          <Spinner label="Loading materials…" />
+        ) : (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1">
+              <label htmlFor="lesson-material" className="mb-1 block text-sm font-medium">
+                Material for this lesson
+              </label>
+              <select
+                id="lesson-material"
+                className="border-divider bg-surface w-full min-h-11 rounded-[var(--radius-sm)] border px-3 text-sm"
+                value={materialChoice}
+                onChange={(e) => setMaterialChoice(e.target.value)}
+              >
+                <option value="">Select a file…</option>
+                {(materialsQuery.data ?? []).map((m) => (
+                  <option key={m.id} value={String(m.id)}>
+                    {m.filename}
+                    {m.processing_status !== 'ready' ? ` (${m.processing_status})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button
+              type="button"
+              disabled={
+                !materialChoice ||
+                updateLesson.isPending ||
+                (lesson.material_id != null && String(lesson.material_id) === materialChoice)
+              }
+              onClick={() => {
+                const id = parseInt(materialChoice, 10)
+                if (!Number.isFinite(id)) return
+                updateLesson.mutate({ material_id: id })
+              }}
+            >
+              {updateLesson.isPending ? 'Saving…' : 'Save link'}
+            </Button>
+          </div>
+        )}
+        {lesson.material_id != null && materialsQuery.data ? (
+          <p className="text-foreground/60 mt-2 text-xs">
+            Linked material id: {lesson.material_id} — you can use Generate when status is ready.
+          </p>
+        ) : null}
+        {updateLesson.isError ? (
+          <p className="text-danger mt-2 text-sm" role="alert">
+            {updateLesson.error instanceof Error ? updateLesson.error.message : 'Could not save'}
+          </p>
+        ) : null}
+      </Card>
 
       {conceptsQuery.isLoading ? <Spinner label="Loading concepts…" /> : null}
       {conceptsQuery.isError && !localConcepts ? (

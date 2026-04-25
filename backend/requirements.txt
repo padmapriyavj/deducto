@@ -1,6 +1,8 @@
 fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 pydantic[email]>=2.10.0
+# Pydantic on Python <3.10 needs this to resolve `X | Y` in model fields (e.g. str | None)
+eval-type-backport>=0.2.0
 langchain
 boto3
 python-dotenv

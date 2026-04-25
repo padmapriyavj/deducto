@@ -22,6 +22,9 @@ export function useStudentDashboardQuery() {
       return getStudentDashboard(token)
     },
     enabled: !!token && role === 'student',
+    // Spring may briefly return 502 via nginx on restart; avoid sticky “unavailable” banner.
+    retry: 1,
+    retryDelay: 800,
   })
 }
 

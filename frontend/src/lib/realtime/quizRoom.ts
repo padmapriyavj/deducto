@@ -10,6 +10,8 @@
 
 import { io, type Socket } from 'socket.io-client'
 
+import { getSocketIoHttpOrigin } from '@/lib/env'
+
 export const QUIZ_SERVER_EVENTS = [
   'room:state',
   'room:error',
@@ -25,18 +27,9 @@ export const QUIZ_CLIENT_EVENTS = ['room:join', 'quiz:start', 'quiz:answer', 'ro
 export type QuizServerEvent = (typeof QUIZ_SERVER_EVENTS)[number]
 export type QuizClientEvent = (typeof QUIZ_CLIENT_EVENTS)[number]
 
-/** Strip ``/api/v1`` so REST base becomes Socket.IO origin (SIO mounts on app root, not under API prefix). */
-function socketHttpOriginFromApiBase(api: string): string {
-  return api.replace(/\/api\/v1\/?$/i, '') || api
-}
-
-/** HTTP(S) origin for Socket.IO (client upgrades to WS). */
+/** HTTP(S) origin for Socket.IO (see {@link getSocketIoHttpOrigin}). */
 function getHttpOrigin(): string | undefined {
-  const ws = import.meta.env.VITE_WS_BASE_URL?.trim().replace(/\/$/, '')
-  if (ws) return ws
-  const api = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '')
-  if (!api) return undefined
-  return socketHttpOriginFromApiBase(api)
+  return getSocketIoHttpOrigin()
 }
 
 export type QuizRoomSocket = Socket

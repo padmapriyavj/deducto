@@ -9,7 +9,8 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { SimpleModal } from '@/components/ui/SimpleModal'
 import { Spinner } from '@/components/ui/Spinner'
 import type { ShopItemResponse } from '@/lib/api/shopSpaceApi'
-import { postShopPurchase } from '@/lib/api/shopSpaceApi'
+import { getInventoryRowFields, postShopPurchase } from '@/lib/api/shopSpaceApi'
+import { getItemIcon, ItemMedia, InventoryItemMedia } from '@/lib/shop/itemDisplay'
 import { queryKeys } from '@/lib/queryKeys'
 import { useShopCatalogQuery, useShopInventoryQuery } from '@/lib/queries/shopSpaceQueries'
 import { useAuthStore } from '@/stores/authStore'
@@ -23,32 +24,6 @@ const CATEGORY_FILTERS = [
 ] as const
 
 type FilterId = (typeof CATEGORY_FILTERS)[number]['id']
-
-const CATEGORY_ICONS: Record<string, string> = {
-  finn_skin: '🦊',
-  backdrop: '🖼️',
-  streak_freeze: '❄️',
-}
-
-const ITEM_ICONS: Record<string, string> = {
-  'Cool Fox': '🦊',
-  'Party Fox': '🎉',
-  'Space Fox': '🚀',
-  'Cozy Bookshelf': '📚',
-  'Study Chair': '🪑',
-  'Warm Desk Lamp': '💡',
-  'Spinning Globe': '🌍',
-  'Coffee Maker': '☕',
-  'Mountain View': '🏔️',
-  'City Night': '🌃',
-  'Enchanted Forest': '🌲',
-  'Ocean Waves': '🌊',
-  'Streak Freeze': '❄️',
-}
-
-function getItemIcon(name: string, category: string): string {
-  return ITEM_ICONS[name] ?? CATEGORY_ICONS[category] ?? '📦'
-}
 
 export function StudentShopPage() {
   const [filter, setFilter] = useState<FilterId>('all')
@@ -156,14 +131,18 @@ export function StudentShopPage() {
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => {
           const owned = ownedByShopItemId.get(item.id) ?? 0
-          const icon = getItemIcon(item.name, item.category)
           return (
             <li key={item.id}>
               <Card padding="md" className="flex h-full flex-col">
                 <div className="mb-3 flex items-center justify-center">
-                  <span className="text-5xl" role="img" aria-label={item.name}>
-                    {icon}
-                  </span>
+                  <ItemMedia
+                    name={item.name}
+                    category={item.category}
+                    assetUrl={item.asset_url}
+                    className="h-12 w-12"
+                    emojiClassName="text-5xl"
+                    alt={item.name}
+                  />
                 </div>
                 <p className="text-foreground/60 text-xs uppercase tracking-wide">{item.category.replace('_', ' ')}</p>
                 <h2 className="font-heading mt-1 text-lg">{item.name}</h2>
@@ -200,21 +179,28 @@ export function StudentShopPage() {
         {inventory.data && inventory.data.length > 0 ? (
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from(ownedByShopItemId.entries()).map(([shopId, n]) => {
-              const item = inventory.data?.find((r) => r.shop_item_id === shopId)
-              const label = item?.name ?? `Item #${shopId}`
-              const category = item?.category ?? ''
-              const icon = getItemIcon(label, category)
+              const row = inventory.data?.find((r) => r.shop_item_id === shopId)
+              const d = row
+                ? getInventoryRowFields(row)
+                : { name: `Item #${shopId}`, category: '', asset_url: '' }
+              const label = d.name || `Item #${shopId}`
               return (
                 <li
                   key={shopId}
                   className="bg-background border-divider flex items-center gap-3 rounded-lg border p-3"
                 >
-                  <span className="text-3xl" role="img" aria-label={label}>
-                    {icon}
-                  </span>
+                  {row ? (
+                    <InventoryItemMedia item={row} className="h-8 w-8 shrink-0" emojiClassName="text-3xl" alt={label} />
+                  ) : (
+                    <span className="text-3xl" aria-label={label}>
+                      {getItemIcon(label, d.category)}
+                    </span>
+                  )}
                   <div className="flex-1">
                     <p className="text-foreground font-medium">{label}</p>
-                    <p className="text-foreground/60 text-xs capitalize">{category.replace('_', ' ')}</p>
+                    <p className="text-foreground/60 text-xs capitalize">
+                      {d.category.replace('_', ' ') || '—'}
+                    </p>
                   </div>
                   <span className="text-foreground/70 font-mono text-sm">×{n}</span>
                 </li>
@@ -247,9 +233,14 @@ export function StudentShopPage() {
         {confirmItem ? (
           <>
             <div className="mb-4 flex justify-center">
-              <span className="text-6xl" role="img" aria-label={confirmItem.name}>
-                {getItemIcon(confirmItem.name, confirmItem.category)}
-              </span>
+              <ItemMedia
+                name={confirmItem.name}
+                category={confirmItem.category}
+                assetUrl={confirmItem.asset_url}
+                className="h-16 w-16"
+                emojiClassName="text-6xl"
+                alt={confirmItem.name}
+              />
             </div>
             <p className="text-foreground/85 text-sm">
               Buy <strong>{confirmItem.name}</strong> for{' '}

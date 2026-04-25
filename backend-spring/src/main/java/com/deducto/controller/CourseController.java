@@ -1,6 +1,6 @@
 package com.deducto.controller;
 
-import com.deducto.dto.auth.ErrorDetailResponse;
+import com.deducto.dto.api.ApiErrorResponse;
 import com.deducto.dto.course.CourseResponse;
 import com.deducto.dto.course.CreateCourseRequest;
 import com.deducto.dto.course.EnrollRequest;
@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -67,7 +68,7 @@ public class CourseController {
         requireAuth(principal);
         if (principal.role() != UserRole.professor) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorDetailResponse("Professor access required"));
+                    .body(ApiErrorResponse.forbiddenWithMessage("Professor access required"));
         }
         User prof = userRepository.findById(principal.id())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
@@ -91,7 +92,7 @@ public class CourseController {
             }
         }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorDetailResponse("Could not allocate a unique join code"));
+                .body(ApiErrorResponse.ofStatus("Internal server error", "Could not allocate a unique join code"));
     }
 
     @GetMapping
@@ -125,7 +126,7 @@ public class CourseController {
     ) {
         requireAuth(principal);
         var course = courseRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+                .orElseThrow(() -> new NoSuchElementException("Course not found: " + id));
         if (!canView(principal, course)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
@@ -143,7 +144,7 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the course owner can update");
         }
         var course = courseRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+                .orElseThrow(() -> new NoSuchElementException("Course not found: " + id));
         if (!Objects.equals(course.getProfessor().getId(), principal.id())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the course owner can update");
         }
@@ -169,18 +170,18 @@ public class CourseController {
         requireAuth(principal);
         if (principal.role() != UserRole.student) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorDetailResponse("Student access required"));
+                    .body(ApiErrorResponse.forbiddenWithMessage("Student access required"));
         }
         var course = courseRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+                .orElseThrow(() -> new NoSuchElementException("Course not found: " + id));
         String want = body.joinCode().strip().toUpperCase();
         String have = course.getJoinCode().strip().toUpperCase();
         if (!want.equals(have)) {
-            return ResponseEntity.badRequest().body(new ErrorDetailResponse("Invalid join code"));
+            return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest("Invalid join code"));
         }
         if (enrollmentRepository.existsByUser_IdAndCourse_Id(principal.id(), id)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(new ErrorDetailResponse("Already enrolled in this course"));
+                    .body(ApiErrorResponse.conflict("Already enrolled in this course"));
         }
         User student = userRepository.getReferenceById(principal.id());
         var en = new Enrollment();
@@ -190,7 +191,7 @@ public class CourseController {
             enrollmentRepository.saveAndFlush(en);
         } catch (DataIntegrityViolationException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(new ErrorDetailResponse("Already enrolled in this course"));
+                    .body(ApiErrorResponse.conflict("Already enrolled in this course"));
         }
         return ResponseEntity.ok(toCourseResponse(course));
     }
@@ -205,7 +206,7 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Professor access required");
         }
         var course = courseRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+                .orElseThrow(() -> new NoSuchElementException("Course not found: " + id));
         if (!Objects.equals(course.getProfessor().getId(), principal.id())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Professor access required");
         }

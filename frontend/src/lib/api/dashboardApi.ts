@@ -20,6 +20,8 @@ export type StudentDashboardUser = {
 export type StudentDashboardCourse = {
   id: number
   name: string
+  /** Spring enrolled-course summaries may include this; optional for stats-only rows. */
+  description?: string | null
   tests_taken: number
   coins_earned: number
   top_weak_concept: string | null
@@ -40,6 +42,76 @@ export type StudentDashboardCourse = {
 export type StudentDashboardResponse = {
   user: StudentDashboardUser
   courses: StudentDashboardCourse[]
+}
+
+/** Spring Boot returns enrolled_courses + top-level coins/streak; FastAPI returns user + courses. */
+function emptyStudentDashboard(): StudentDashboardResponse {
+  return {
+    user: { id: 0, display_name: '', coins: 0, current_streak: 0, avatar_config: {} },
+    courses: [],
+  }
+}
+
+function normalizeStudentDashboardPayload(raw: unknown): StudentDashboardResponse {
+  if (!raw || typeof raw !== 'object') {
+    return emptyStudentDashboard()
+  }
+  const o = raw as Record<string, unknown>
+  if (Array.isArray(o.courses) && o.user && typeof o.user === 'object') {
+    return raw as StudentDashboardResponse
+  }
+  const enrolled = o.enrolled_courses
+  if (Array.isArray(enrolled)) {
+    const temposRaw = o.upcoming_tempos
+    const tempos = Array.isArray(temposRaw) ? temposRaw : []
+    const courses: StudentDashboardCourse[] = enrolled.map((row) => {
+      const c = row as Record<string, unknown>
+      const desc = c.description
+      const id = Number(c.id)
+      const upcomingForCourse = tempos
+        .filter((t) => {
+          if (!t || typeof t !== 'object') return false
+          const u = t as Record<string, unknown>
+          return Number(u.course_id) === id
+        })
+        .map((t) => {
+          const u = t as Record<string, unknown>
+          return {
+            id: String(u.id ?? ''),
+            title: 'Scheduled tempo',
+            date: u.scheduled_at != null ? String(u.scheduled_at) : '',
+          }
+        })
+      return {
+        id,
+        name: String(c.name ?? 'Course'),
+        description: typeof desc === 'string' && desc.trim() ? desc : null,
+        tests_taken: typeof c.tests_taken === 'number' ? c.tests_taken : 0,
+        coins_earned: typeof c.coins_earned === 'number' ? c.coins_earned : 0,
+        top_weak_concept: null,
+        active_tempo: null,
+        upcoming_events: upcomingForCourse,
+        completed_events: [],
+      }
+    })
+    return {
+      user: {
+        id: 0,
+        display_name: '',
+        coins: typeof o.coins === 'number' ? o.coins : 0,
+        current_streak: typeof o.current_streak === 'number' ? o.current_streak : 0,
+        avatar_config: {},
+      },
+      courses,
+    }
+  }
+  if (Array.isArray(o.courses)) {
+    return {
+      user: emptyStudentDashboard().user,
+      courses: o.courses as StudentDashboardCourse[],
+    }
+  }
+  return emptyStudentDashboard()
 }
 
 export type ProfessorDashboardUser = {
@@ -88,7 +160,8 @@ export type CourseAnalyticsResponse = {
 }
 
 export async function getStudentDashboard(token: string): Promise<StudentDashboardResponse> {
-  return authedJson<StudentDashboardResponse>('/dashboard/student', token)
+  const raw = await authedJson<unknown>('/dashboard/student', token)
+  return normalizeStudentDashboardPayload(raw)
 }
 
 export async function getProfessorDashboard(token: string): Promise<ProfessorDashboardResponse> {

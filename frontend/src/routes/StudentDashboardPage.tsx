@@ -35,6 +35,10 @@ export function StudentDashboardPage() {
     ? `Hey ${user.display_name}! Ready to learn something new today?`
     : 'Hey there! Ready to learn something new today?'
 
+  const dashboardCourses =
+    dashboard.isSuccess && dashboard.data?.courses ? dashboard.data.courses : []
+  const hasDashboardCourses = dashboardCourses.length > 0
+
   return (
     <div className="text-left">
       {/* Finn welcome section - centered */}
@@ -65,17 +69,19 @@ export function StudentDashboardPage() {
 
       {dashboard.isLoading ? <Spinner label="Loading dashboard…" /> : null}
       {dashboard.isError ? (
-        <p className="text-danger mb-3 text-sm">
-          Dashboard API unavailable — showing your enrolled courses from the courses list instead.
+        <p className="text-danger mb-3 text-sm" role="alert">
+          We couldn’t load the full dashboard (the server may be busy or the Spring app may need a
+          restart). Showing enrolled courses from the course list. If this persists, check the browser
+          Network tab for <code className="text-xs">/api/v1/dashboard/student</code> (expect 200).
         </p>
       ) : null}
 
-      {dashboard.isSuccess && dashboard.data.courses.length > 0 ? (
+      {dashboard.isSuccess && hasDashboardCourses ? (
         <div className="space-y-4">
-          {dashboard.data.courses.map((c) => (
+          {dashboardCourses.map((c) => (
             <StudentCourseCard
               key={c.id}
-              course={{ id: c.id, name: c.name }}
+              course={{ id: c.id, name: c.name, description: c.description }}
               dashboardData={{
                 tests_taken: c.tests_taken,
                 coins_earned: c.coins_earned,
@@ -87,7 +93,7 @@ export function StudentDashboardPage() {
         </div>
       ) : null}
 
-      {dashboard.isSuccess && dashboard.data.courses.length === 0 && coursesFallback.data && coursesFallback.data.length > 0 ? (
+      {dashboard.isSuccess && !hasDashboardCourses && coursesFallback.data && coursesFallback.data.length > 0 ? (
         <div className="space-y-4">
           {coursesFallback.data.map((c) => (
             <StudentCourseCard key={c.id} course={c} />
@@ -104,7 +110,7 @@ export function StudentDashboardPage() {
       ) : null}
 
       {dashboard.isSuccess &&
-      dashboard.data.courses.length === 0 &&
+      !hasDashboardCourses &&
       (!coursesFallback.data || coursesFallback.data.length === 0) &&
       !coursesFallback.isLoading ? (
         <div className="bg-surface shadow-soft border-divider/60 rounded-[var(--radius-lg)] border p-8 text-center sm:p-10">

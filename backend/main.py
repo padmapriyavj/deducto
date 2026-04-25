@@ -5,7 +5,6 @@ from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from postgrest.exceptions import APIError
 from supabase import Client, create_client
 from app_platform.auth.router import router as auth_router
@@ -21,7 +20,7 @@ from app_platform.materials.router import router as materials_router
 from engagement.realtime.asgi import mount_socketio
 from engagement.router import router as engagement_router
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 fastapi_app = FastAPI(title="Project X API")
 
@@ -38,13 +37,7 @@ if (_backend_dir / "platform").is_dir():
         "Auth code lives under backend/app_platform/auth/."
     )
 
-fastapi_app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS is applied by the Nginx gateway (hybrid); do not set CORSMiddleware here.
 
 fastapi_app.include_router(auth_router)
 fastapi_app.include_router(courses_router)

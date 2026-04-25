@@ -19,31 +19,12 @@ import type { FinnMood } from '@/components/finn/FinnMascot'
 import { FinnMascot } from '@/components/finn/FinnMascot'
 import { SimpleModal } from '@/components/ui/SimpleModal'
 import type { InventoryItemResponse } from '@/lib/api/shopSpaceApi'
-import { saveMySpace, type SpacePlacement } from '@/lib/api/shopSpaceApi'
+import { getInventoryRowFields, saveMySpace, type SpacePlacement } from '@/lib/api/shopSpaceApi'
+import { InventoryItemMedia } from '@/lib/shop/itemDisplay'
 import type { SpaceSlot } from '@/lib/space/defaultLayout'
 import { useDefaultSpaceLayoutQuery, useShopInventoryQuery } from '@/lib/queries/shopSpaceQueries'
 import { useStudentEconomyStore } from '@/stores/studentEconomyStore'
 import { useAuthStore } from '@/stores/authStore'
-
-const ITEM_ICONS: Record<string, string> = {
-  'Cool Fox': '🦊',
-  'Party Fox': '🎉',
-  'Space Fox': '🚀',
-  'Cozy Bookshelf': '📚',
-  'Study Chair': '🪑',
-  'Warm Desk Lamp': '💡',
-  'Spinning Globe': '🌍',
-  'Coffee Maker': '☕',
-  'Mountain View': '🏔️',
-  'City Night': '🌃',
-  'Enchanted Forest': '🌲',
-  'Ocean Waves': '🌊',
-  'Streak Freeze': '❄️',
-}
-
-function getItemIcon(name: string): string {
-  return ITEM_ICONS[name] ?? '📦'
-}
 
 function DraggableItem({ 
   id, 
@@ -66,7 +47,7 @@ function DraggableItem({
       {...attributes}
       className={`cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-50' : ''}`}
     >
-      <span className="text-3xl">{getItemIcon(item.name)}</span>
+      <InventoryItemMedia item={item} className="h-7 w-7" emojiClassName="text-3xl" />
     </div>
   )
 }
@@ -111,7 +92,7 @@ function DroppableSlot({
             )}
           </div>
           <p className="mt-1 text-center text-xs font-medium text-amber-900/70">
-            {item?.name || slot.label}
+            {item ? getInventoryRowFields(item).name : slot.label}
           </p>
         </>
       )}
@@ -410,7 +391,7 @@ export function StudentSpacePage() {
                   )}
                 </div>
                 <p className="mt-2 text-center text-xs font-medium text-amber-900/70">
-                  {wallLeftItem?.name || 'Left wall'}
+                  {wallLeftItem ? getInventoryRowFields(wallLeftItem).name : 'Left wall'}
                 </p>
               </DroppableSlot>
             )}
@@ -442,7 +423,7 @@ export function StudentSpacePage() {
               )}
             </div>
             <p className="mt-2 text-center text-xs font-medium text-amber-900/70">
-              {wallRightItem?.name || 'Bookshelf'}
+              {wallRightItem ? getInventoryRowFields(wallRightItem).name : 'Bookshelf'}
             </p>
           </div>
 
@@ -466,7 +447,7 @@ export function StudentSpacePage() {
                 )}
               </div>
               <p className="mt-1 text-center text-xs font-medium text-amber-100/80">
-                {floorItem?.name || 'Floor'}
+                {floorItem ? getInventoryRowFields(floorItem).name : 'Floor'}
               </p>
             </DroppableSlot>
           )}
@@ -491,7 +472,7 @@ export function StudentSpacePage() {
                 )}
               </div>
               <p className="mt-1 text-center text-xs font-medium text-amber-100/80">
-                {nookItem?.name || 'Reading nook'}
+                {nookItem ? getInventoryRowFields(nookItem).name : 'Reading nook'}
               </p>
             </DroppableSlot>
           )}
@@ -529,7 +510,7 @@ export function StudentSpacePage() {
         <DragOverlay dropAnimation={null}>
           {draggedItem && (
             <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-primary bg-surface shadow-xl">
-              <span className="text-3xl">{getItemIcon(draggedItem.name)}</span>
+              <InventoryItemMedia item={draggedItem} className="h-10 w-10" emojiClassName="text-3xl" />
             </div>
           )}
         </DragOverlay>
@@ -547,11 +528,17 @@ export function StudentSpacePage() {
                 const currentItem = resolveItem(currentId)
                 return currentItem ? (
                   <div className="border-divider bg-surface flex items-center gap-4 rounded-lg border p-4">
-                    <span className="text-4xl">{getItemIcon(currentItem.name)}</span>
+                    <InventoryItemMedia
+                      item={currentItem}
+                      className="h-10 w-10"
+                      emojiClassName="text-4xl"
+                    />
                     <div className="flex-1">
-                      <p className="text-foreground font-semibold">{currentItem.name}</p>
+                      <p className="text-foreground font-semibold">
+                        {getInventoryRowFields(currentItem).name}
+                      </p>
                       <p className="text-foreground/50 text-xs capitalize">
-                        {currentItem.category.replace('_', ' ')}
+                        {getInventoryRowFields(currentItem).category.replace('_', ' ')}
                       </p>
                     </div>
                     <button
@@ -591,6 +578,7 @@ export function StudentSpacePage() {
                   <ul className="max-h-52 space-y-2 overflow-y-auto">
                     {(inventory.data ?? []).map((row) => {
                       const isPlaced = placedInventoryIds.has(String(row.id))
+                      const d = getInventoryRowFields(row)
                       return (
                         <li key={row.id}>
                           <button
@@ -604,11 +592,15 @@ export function StudentSpacePage() {
                             }`}
                           >
                             <div className="flex items-center gap-3">
-                              <span className="text-2xl">{getItemIcon(row.name)}</span>
+                              <InventoryItemMedia
+                                item={row}
+                                className="h-6 w-6"
+                                emojiClassName="text-2xl"
+                              />
                               <div>
-                                <span className="text-foreground font-medium">{row.name}</span>
+                                <span className="text-foreground font-medium">{d.name}</span>
                                 <span className="text-foreground/50 ml-2 text-xs capitalize">
-                                  {row.category.replace('_', ' ')}
+                                  {d.category.replace('_', ' ')}
                                 </span>
                               </div>
                             </div>

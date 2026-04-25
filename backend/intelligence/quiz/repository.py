@@ -186,6 +186,17 @@ def attempt_has_answers(attempt_id: int) -> bool:
     return bool(res.data and len(res.data) > 0)
 
 
+def list_answers_for_attempt(attempt_id: int) -> list[dict[str, Any]]:
+    sb = get_supabase()
+    res = (
+        sb.table("answers")
+        .select("question_id,selected_choice,is_correct,time_taken_ms")
+        .eq("attempt_id", int(attempt_id))
+        .execute()
+    )
+    return list(res.data or [])
+
+
 def update_user_coins(user_id: int, new_balance: int) -> None:
     sb = get_supabase()
     sb.table("users").update({"coins": new_balance}).eq("id", int(user_id)).execute()

@@ -59,6 +59,43 @@ def _add_coins_cas(user_id: int, delta: int) -> int:
     return new_coins
 
 
+def read_streak_snapshot(user_id: int) -> StreakUpdateResult:
+    """
+    Read-only current streak (no DB writes). For idempotent score responses and similar.
+    """
+    today_d = _utc_today()
+    sb = get_supabase()
+    try:
+        row = (
+            sb.table("users")
+            .select("current_streak,longest_streak,last_activity_date")
+            .eq("id", int(user_id))
+            .single()
+            .execute()
+        )
+    except APIError as e:
+        raise ValueError("User not found") from e
+
+    data: dict[str, Any] = dict(row.data)
+    current = int(data.get("current_streak") or 0)
+    longest = int(data.get("longest_streak") or 0)
+    raw_last = data.get("last_activity_date")
+    last_d: date | None = None
+    if raw_last:
+        if isinstance(raw_last, str):
+            last_d = date.fromisoformat(raw_last[:10])
+        elif isinstance(raw_last, date):
+            last_d = raw_last
+    already = last_d is not None and last_d == today_d
+    return StreakUpdateResult(
+        current_streak=current,
+        longest_streak=longest,
+        milestone_bonus_coins=0,
+        last_activity_date=last_d or today_d,
+        already_active_today=already,
+    )
+
+
 def apply_streak_after_quiz_completion(user_id: int, *, today: date | None = None) -> StreakUpdateResult:
     """
     Qualifying quiz completion (UTC day). First completion of the day advances streak;

@@ -1,4 +1,7 @@
-from datetime import date, datetime
+from __future__ import annotations
+
+import logging
+from datetime import date, datetime, timezone
 
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
@@ -38,6 +41,36 @@ def _parse_optional_date(value: date | datetime | str | None) -> date | None:
     return date.fromisoformat(s[:10])
 
 
+def _is_supabase_no_rows_error(exc: APIError) -> bool:
+    if exc.code == "PGRST116":
+        return True
+    msg = (exc.message or "").lower()
+    return "0 rows" in msg or "no rows" in msg or "multiple (or no) rows" in msg
+
+
+def _user_from_hybrid_jwt_payload(payload: dict, user_id: int) -> User:
+    """Nginx routes auth to Spring; user may exist only in Spring DB, not Supabase."""
+    now = datetime.now(timezone.utc)
+    role = str(payload.get("role") or "student")
+    if role not in ("student", "professor"):
+        role = "student"
+    return User(
+        id=user_id,
+        email=f"spring-user-{user_id}@local.invalid",
+        password_hash="",
+        role=role,
+        display_name="",
+        avatar_config={},
+        coins=0,
+        current_streak=0,
+        longest_streak=0,
+        last_activity_date=None,
+        streak_freezes=2,
+        created_at=now,
+        updated_at=now,
+    )
+
+
 def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     try:
         payload = decode_access_token(token)
@@ -54,22 +87,45 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
             .single()
             .execute()
         )
-    except APIError:
-        raise HTTPException(status_code=401, detail="Could not validate credentials")
+    except APIError as e:
+        if _is_supabase_no_rows_error(e):
+            return _user_from_hybrid_jwt_payload(payload, user_id)
+        # RLS, permission, or other PostgREST errors: still trust a valid Spring-issued JWT.
+        logging.getLogger(__name__).warning(
+            "Supabase users lookup failed (using JWT claims): %s", e
+        )
+        return _user_from_hybrid_jwt_payload(payload, user_id)
 
     row = res.data
-    return User(
-        id=int(row["id"]),
-        email=row["email"],
-        password_hash=row["password_hash"],
-        role=row["role"],
-        display_name=row["display_name"],
-        avatar_config=row["avatar_config"],
-        coins=int(row["coins"]),
-        current_streak=int(row["current_streak"]),
-        longest_streak=int(row["longest_streak"]),
-        last_activity_date=_parse_optional_date(row.get("last_activity_date")),
-        streak_freezes=int(row["streak_freezes"]),
-        created_at=_parse_datetime(row["created_at"]),
-        updated_at=_parse_datetime(row["updated_at"]),
-    )
+    if not row or not isinstance(row, dict):
+        return _user_from_hybrid_jwt_payload(payload, user_id)
+
+    def _i(key: str, default: int = 0) -> int:
+        v = row.get(key)
+        if v is None:
+            return default
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return default
+
+    ac = row.get("avatar_config")
+    try:
+        return User(
+            id=int(row["id"]),
+            email=str(row.get("email") or ""),
+            password_hash=str(row.get("password_hash") or ""),
+            role=str(row.get("role") or "student"),
+            display_name=str(row.get("display_name") or ""),
+            avatar_config=ac if isinstance(ac, dict) else {},
+            coins=_i("coins", 0),
+            current_streak=_i("current_streak", 0),
+            longest_streak=_i("longest_streak", 0),
+            last_activity_date=_parse_optional_date(row.get("last_activity_date")),
+            streak_freezes=_i("streak_freezes", 2),
+            created_at=_parse_datetime(row["created_at"]),
+            updated_at=_parse_datetime(row["updated_at"]),
+        )
+    except (KeyError, TypeError, ValueError) as e:
+        logging.getLogger(__name__).warning("Supabase user row parse failed: %s", e)
+        return _user_from_hybrid_jwt_payload(payload, user_id)

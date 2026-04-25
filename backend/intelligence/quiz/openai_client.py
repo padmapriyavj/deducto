@@ -142,12 +142,12 @@ def generate_mcq_batch(
     kwargs: dict[str, Any] = {
         "model": resolved_model,
         "temperature": temperature,
-        "messages": build_messages(system, user),
+        "messages": build_messages(system, user, model=resolved_model),
     }
 
     # Gemma doesn't support response_format — rely on prompt instructions only
-    if not is_gemma_model():
-        if use_openai_json_schema_mode():
+    if not is_gemma_model(resolved_model):
+        if use_openai_json_schema_mode(resolved_model):
             kwargs["response_format"] = {
                 "type": "json_schema",
                 "json_schema": _quiz_questions_json_schema(n),
@@ -155,9 +155,15 @@ def generate_mcq_batch(
         else:
             kwargs["response_format"] = {"type": "json_object"}
 
-    resp = get_openai_client().chat.completions.create(**kwargs)
+    try:
+        resp = get_openai_client().chat.completions.create(**kwargs)
+    except Exception as e:
+        raise RuntimeError(f"LLM request failed: {e}") from e
     raw = resp.choices[0].message.content or "{}"
-    data = _parse_raw(raw)
+    try:
+        data = _parse_raw(raw)
+    except (json.JSONDecodeError, TypeError) as e:
+        raise RuntimeError("Model did not return valid JSON for questions") from e
     arr = data.get("questions")
     if not isinstance(arr, list) or len(arr) != n:
         raise ValueError(

@@ -73,10 +73,10 @@ Return a single JSON object matching this exact shape. Use "concepts" as the onl
 """
 
 
-def _concepts_response_format() -> dict[str, Any] | None:
-    if is_gemma_model():
+def _concepts_response_format(*, resolved_model: str) -> dict[str, Any] | None:
+    if is_gemma_model(resolved_model):
         return None  # Gemma doesn't support response_format
-    if use_openai_json_schema_mode():
+    if use_openai_json_schema_mode(resolved_model):
         return {"type": "json_schema", "json_schema": _CONCEPTS_JSON_SCHEMA}
     return {"type": "json_object"}
 
@@ -107,9 +107,9 @@ def extract_concepts_from_text(
     kwargs: dict[str, Any] = {
         "model": resolved_model,
         "temperature": 0.3,
-        "messages": build_messages(system, user),
+        "messages": build_messages(system, user, model=resolved_model),
     }
-    fmt = _concepts_response_format()
+    fmt = _concepts_response_format(resolved_model=resolved_model)
     if fmt is not None:
         kwargs["response_format"] = fmt
 

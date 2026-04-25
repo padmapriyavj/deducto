@@ -16,4 +16,6 @@ export type CreateLessonBody = {
 export type UpdateLessonBody = {
   title?: string
   week_number?: number
+  /** PDF/ppt material in this course to use as the lesson source for concept generation */
+  material_id?: number
 }

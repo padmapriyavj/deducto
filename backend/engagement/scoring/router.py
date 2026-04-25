@@ -35,6 +35,8 @@ async def get_my_streak_and_coins(user_id: int = Depends(get_current_user_id)) -
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found") from e
 
     d = row.data
+    if not d or not isinstance(d, dict):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     raw = d.get("last_activity_date")
     last_s: str | None
     if raw is None:

@@ -1,6 +1,6 @@
 package com.deducto.controller;
 
-import com.deducto.dto.auth.ErrorDetailResponse;
+import com.deducto.dto.api.ApiErrorResponse;
 import com.deducto.dto.lesson.CreateLessonRequest;
 import com.deducto.dto.lesson.LessonResponse;
 import com.deducto.dto.lesson.UpdateLessonRequest;
@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
 @RestController
@@ -64,13 +65,13 @@ public class LessonController {
         requireAuth(principal);
         if (principal.role() != UserRole.professor) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorDetailResponse("Professor access required"));
+                    .body(ApiErrorResponse.forbiddenWithMessage("Professor access required"));
         }
         var course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+                .orElseThrow(() -> new NoSuchElementException("Course not found: " + courseId));
         if (!Objects.equals(course.getProfessor().getId(), principal.id())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorDetailResponse("Only the course owner can create lessons"));
+                    .body(ApiErrorResponse.forbiddenWithMessage("Only the course owner can create lessons"));
         }
         if (body.materialId() != null) {
             assertMaterialInCourse(body.materialId(), courseId);
@@ -94,7 +95,7 @@ public class LessonController {
     ) {
         requireAuth(principal);
         var course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+                .orElseThrow(() -> new NoSuchElementException("Course not found: " + courseId));
         if (!canViewCourse(principal, course)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
@@ -110,7 +111,7 @@ public class LessonController {
     ) {
         requireAuth(principal);
         var lesson = lessonRepository.findByIdWithCourseAndMaterial(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found"));
+                .orElseThrow(() -> new NoSuchElementException("Lesson not found: " + id));
         if (!canViewCourse(principal, lesson.getCourse())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
@@ -127,21 +128,21 @@ public class LessonController {
         requireAuth(principal);
         if (principal.role() != UserRole.professor) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorDetailResponse("Professor access required"));
+                    .body(ApiErrorResponse.forbiddenWithMessage("Professor access required"));
         }
         var lesson = lessonRepository.findByIdWithCourseAndMaterial(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found"));
+                .orElseThrow(() -> new NoSuchElementException("Lesson not found: " + id));
         long courseId = lesson.getCourse().getId();
         if (!Objects.equals(lesson.getCourse().getProfessor().getId(), principal.id())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorDetailResponse("Only the course owner can update lessons"));
+                    .body(ApiErrorResponse.forbiddenWithMessage("Only the course owner can update lessons"));
         }
         if (body.title() != null) {
             lesson.setTitle(body.title().trim());
         }
         if (body.weekNumber() != null) {
             if (body.weekNumber() <= 0) {
-                return ResponseEntity.badRequest().body(new ErrorDetailResponse("week_number must be positive"));
+                return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest("week_number must be positive"));
             }
             lesson.setWeekNumber(body.weekNumber());
         }
@@ -158,7 +159,7 @@ public class LessonController {
 
     private void assertMaterialInCourse(long materialId, long courseId) {
         var m = materialRepository.findByIdWithCourse(materialId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Material not found"));
+                .orElseThrow(() -> new NoSuchElementException("Material not found: " + materialId));
         if (!Objects.equals(m.getCourse().getId(), courseId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Material does not belong to this course");
         }

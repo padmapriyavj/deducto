@@ -5,6 +5,27 @@ export type ShopItemResponse = components['schemas']['ShopItemResponse']
 export type InventoryItemResponse = components['schemas']['InventoryItemResponse']
 export type PurchaseResponse = components['schemas']['PurchaseResponse']
 
+/**
+ * Spring returns nested `item` (shop catalog); FastAPI flattens name/category/asset_url on the row.
+ */
+export function getInventoryRowFields(
+  row: InventoryItemResponse & { item?: ShopItemResponse; user_id?: number },
+): { name: string; category: string; asset_url: string } {
+  const nested = (row as { item?: ShopItemResponse }).item
+  if (nested) {
+    return {
+      name: nested.name,
+      category: nested.category,
+      asset_url: nested.asset_url ?? '',
+    }
+  }
+  return {
+    name: row.name ?? '',
+    category: row.category ?? '',
+    asset_url: row.asset_url ?? '',
+  }
+}
+
 function authHeaders(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}` }
 }

@@ -1,4 +1,5 @@
 """Pydantic models for QuizGenerationConfig (PRD §7.6) and API payloads."""
+from __future__ import annotations
 
 from decimal import Decimal
 from typing import Literal

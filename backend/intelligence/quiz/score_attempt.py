@@ -7,7 +7,7 @@ from typing import Any
 
 from engagement.scoring.mastery import apply_mastery_for_attempt
 from engagement.scoring.rules import compute_base_coins
-from engagement.scoring.streak import apply_streak_after_quiz_completion
+from engagement.scoring.streak import apply_streak_after_quiz_completion, read_streak_snapshot
 from intelligence.betcha.service import apply_betcha_resolution_to_attempt
 from intelligence.quiz.repository import (
     attempt_has_answers,
@@ -15,12 +15,52 @@ from intelligence.quiz.repository import (
     get_quiz_row,
     get_user_coins,
     insert_answers,
+    list_answers_for_attempt,
     list_questions,
     mark_attempt_completed,
     update_attempt_scores,
     update_user_coins,
 )
 from intelligence.quiz.schemas import AnswerInput, ScoreAttemptResult
+
+
+def _score_result_from_completed_attempt(
+    *,
+    quiz_id: int,
+    attempt_id: int,
+    user_id: int,
+    attempt: dict[str, Any],
+) -> ScoreAttemptResult:
+    """Idempotent: attempt already has ``completed_at``; return stored score without double-applying."""
+    questions = list_questions(quiz_id)
+    answers = list_answers_for_attempt(attempt_id)
+    correct = sum(1 for a in answers if a.get("is_correct"))
+    total = len(questions) if questions else max(len(answers), 1)
+    if total < 1:
+        total = 1
+    if answers or questions:
+        score_pct = (Decimal(correct) / Decimal(total) * Decimal("100")).quantize(Decimal("0.01"))
+    else:
+        score_pct = Decimal(str(attempt.get("score_pct") or "0"))
+    coins_earned = int(attempt.get("coins_earned") or 0)
+    try:
+        streak = read_streak_snapshot(user_id)
+    except ValueError:
+        streak = None
+    return ScoreAttemptResult(
+        quiz_id=quiz_id,
+        attempt_id=attempt_id,
+        score_pct=score_pct,
+        correct_count=correct,
+        total_questions=total,
+        base_coins=coins_earned,
+        payout_coins=coins_earned,
+        betcha_effective_factor=None,
+        betcha_applied=False,
+        current_streak=streak.current_streak if streak is not None else None,
+        streak_milestone_bonus_coins=0,
+        streak_already_active_today=streak.already_active_today if streak is not None else False,
+    )
 
 
 def score_attempt(
@@ -43,7 +83,9 @@ def score_attempt(
     if int(attempt.get("quiz_id")) != int(quiz_id):
         raise ValueError("Attempt does not match quiz")
     if attempt.get("completed_at"):
-        raise ValueError("Attempt already scored")
+        return _score_result_from_completed_attempt(
+            quiz_id=quiz_id, attempt_id=attempt_id, user_id=user_id, attempt=attempt
+        )
     if attempt_has_answers(attempt_id):
         raise ValueError("Attempt already has submitted answers")
 

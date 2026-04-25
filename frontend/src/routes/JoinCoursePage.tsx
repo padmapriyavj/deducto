@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { TextField } from '@/components/ui/FormField'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { Spinner } from '@/components/ui/Spinner'
+import { JOIN_CODE_MAX_LENGTH } from '@/lib/joinInvite'
 import { useCourseJoinInfoQuery, useEnrollMutation } from '@/lib/queries/courseQueries'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -149,11 +150,11 @@ export function JoinCoursePage() {
             label="Join code"
             type="text"
             required
-            minLength={6}
-            maxLength={6}
+            minLength={JOIN_CODE_MAX_LENGTH}
+            maxLength={JOIN_CODE_MAX_LENGTH}
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-            placeholder="e.g. ABC123"
+            placeholder="8 characters (A–Z, 0–9)"
             inputClassName="font-mono uppercase tracking-widest"
             autoComplete="off"
             error={enroll.isError ? parseApiError(enroll.error) : undefined}

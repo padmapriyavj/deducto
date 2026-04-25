@@ -57,9 +57,9 @@ def test_generate_mcq_batch_mocked() -> None:
     )
     mock_resp = MagicMock()
     mock_resp.choices = [MagicMock(message=MagicMock(content=fake_json))]
-    with patch("intelligence.quiz.openai_client._client") as mc:
+    with patch("intelligence.quiz.openai_client.get_openai_client") as gc:
         client_inst = MagicMock()
-        mc.return_value = client_inst
+        gc.return_value = client_inst
         client_inst.chat.completions.create.return_value = mock_resp
         drafts = generate_mcq_batch(
             context_text="ctx",

@@ -1,7 +1,7 @@
 package com.deducto.controller;
 
 import com.deducto.dto.auth.AuthResponse;
-import com.deducto.dto.auth.ErrorDetailResponse;
+import com.deducto.dto.api.ApiErrorResponse;
 import com.deducto.dto.auth.LoginRequest;
 import com.deducto.dto.auth.SignupRequest;
 import com.deducto.dto.auth.UserResponse;
@@ -49,7 +49,7 @@ public class AuthController {
         if (userRepository.existsByEmail(body.email().trim().toLowerCase())) {
             return ResponseEntity
                     .status(HttpStatus.CONFLICT)
-                    .body(new ErrorDetailResponse("Email already registered"));
+                    .body(ApiErrorResponse.conflict("Email already registered"));
         }
         var user = new User();
         String email = body.email().trim().toLowerCase();
@@ -70,7 +70,7 @@ public class AuthController {
         } catch (DataIntegrityViolationException e) {
             return ResponseEntity
                     .status(HttpStatus.CONFLICT)
-                    .body(new ErrorDetailResponse("Email already registered"));
+                    .body(ApiErrorResponse.conflict("Email already registered"));
         }
         return ResponseEntity.ok(
                 AuthResponse.of(toUserResponse(user), jwtService.createToken(user.getId(), user.getRole()))
@@ -79,13 +79,12 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest body) {
-        var userOpt = userRepository.findByEmail(body.email().trim().toLowerCase());
-        if (userOpt.isEmpty() || !passwordEncoder.matches(body.password(), userOpt.get().getPasswordHash())) {
+        var user = userRepository.findByEmail(body.email().trim().toLowerCase()).orElse(null);
+        if (user == null || !passwordEncoder.matches(body.password(), user.getPasswordHash())) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorDetailResponse("Invalid credentials"));
+                    .body(ApiErrorResponse.ofStatus("Unauthorized", "Invalid credentials"));
         }
-        var user = userOpt.get();
         return ResponseEntity.ok(
                 AuthResponse.of(toUserResponse(user), jwtService.createToken(user.getId(), user.getRole()))
         );

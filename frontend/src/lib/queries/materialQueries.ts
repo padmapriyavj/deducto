@@ -24,9 +24,12 @@ export function useUploadMaterialMutation(courseId: number) {
       if (!token) throw new Error('Not authenticated')
       return uploadMaterial(token, courseId, file, lessonId)
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.courseMaterials(courseId) })
       void queryClient.invalidateQueries({ queryKey: queryKeys.courseLessons(courseId) })
+      if (variables.lessonId != null && variables.lessonId > 0) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.lesson(variables.lessonId) })
+      }
     },
   })
 }

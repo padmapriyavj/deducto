@@ -1,0 +1,20 @@
+# Hybrid gateway: Nginx in Docker → Spring (host :8080) + FastAPI (host :8000).
+# 1) Start Spring and FastAPI on the host (with DB env as usual).
+# 2) Optional: CORS_ORIGIN must match the browser app origin (Vite default below).
+# 3) Run: docker compose up gateway
+#
+# On Linux, extra_hosts below maps host.docker.internal to the host gateway.
+
+services:
+  gateway:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    environment:
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+    volumes:
+      - ./docker/gateway-entrypoint.sh:/gateway-entrypoint.sh:ro
+      - ./nginx/gateway.docker.conf:/templates/gateway.docker.conf:ro
+    entrypoint: ["/bin/sh", "/gateway-entrypoint.sh"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

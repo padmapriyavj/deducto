@@ -1,4 +1,5 @@
 """Pydantic models for concept extraction (PRD concepts + lessons)."""
+from __future__ import annotations
 
 from pydantic import BaseModel, Field
 

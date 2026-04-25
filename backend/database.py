@@ -1,11 +1,13 @@
 import os
 from functools import lru_cache
+from pathlib import Path
 
 from dotenv import load_dotenv
 from sqlalchemy.orm import DeclarativeBase
 from supabase import Client, create_client
 
-load_dotenv()
+# Always load ``backend/.env`` regardless of process cwd (Uvicorn often starts from repo root).
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 class Base(DeclarativeBase):
     pass

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { TextField } from '@/components/ui/FormField'
 import { SimpleModal } from '@/components/ui/SimpleModal'
-import { parseInviteCourseId } from '@/lib/joinInvite'
+import { JOIN_CODE_MAX_LENGTH, parseInviteCourseId } from '@/lib/joinInvite'
 import { useEnrollMutation } from '@/lib/queries/courseQueries'
 
 type JoinCourseModalProps = {
@@ -92,14 +92,14 @@ export function JoinCourseModal({ isOpen, onClose, onSuccess }: JoinCourseModalP
           label="Join code"
           type="text"
           required
-          minLength={6}
-          maxLength={6}
+          minLength={JOIN_CODE_MAX_LENGTH}
+          maxLength={JOIN_CODE_MAX_LENGTH}
           value={joinCode}
           onChange={(e) => {
             setJoinCode(e.target.value.toUpperCase())
             enroll.reset()
           }}
-          placeholder="e.g. ABC123"
+          placeholder="8 characters (A–Z, 0–9)"
           error={enrollError}
           inputClassName="font-mono uppercase tracking-widest"
         />

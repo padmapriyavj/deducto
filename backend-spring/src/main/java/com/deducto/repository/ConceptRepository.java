@@ -12,6 +12,9 @@ public interface ConceptRepository extends JpaRepository<Concept, Long> {
 
     List<Concept> findByLesson_IdOrderByIdAsc(long lessonId);
 
+    @Query("SELECT c.id FROM Concept c WHERE c.lesson.course.id = :courseId")
+    List<Long> findIdsByCourseId(@Param("courseId") long courseId);
+
     @Modifying
     @Query("delete from Concept c where c.lesson.id = :lessonId")
     void deleteByLesson_Id(@Param("lessonId") long lessonId);

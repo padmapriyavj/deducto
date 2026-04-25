@@ -2,6 +2,7 @@
 .claude/
 .vscode/
 *.md
+!docs/operations-hybrid.md
 *.txt
 *.env
 *.env.example

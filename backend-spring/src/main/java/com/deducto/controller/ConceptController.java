@@ -1,6 +1,6 @@
 package com.deducto.controller;
 
-import com.deducto.dto.auth.ErrorDetailResponse;
+import com.deducto.dto.api.ApiErrorResponse;
 import com.deducto.dto.concept.ConceptGenerateResponse;
 import com.deducto.dto.concept.ConceptItemResponse;
 import com.deducto.dto.concept.ConceptListResponse;
@@ -34,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
 @RestController
@@ -82,27 +83,27 @@ public class ConceptController {
         requireAuth(principal);
         if (principal.role() != UserRole.professor) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorDetailResponse("Professor access required"));
+                    .body(ApiErrorResponse.forbiddenWithMessage("Professor access required"));
         }
         if (!StringUtils.hasText(openAiApiKey)) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(new ErrorDetailResponse(
+                    .body(ApiErrorResponse.serviceUnavailable(
                             "LLM API key is not configured (set OPENAI_API_KEY, or GROQ_API_KEY with OPENAI_BASE_URL)"));
         }
         var lesson = lessonRepository.findByIdWithCourseAndMaterial(lessonId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found"));
+                .orElseThrow(() -> new NoSuchElementException("Lesson not found: " + lessonId));
         if (!Objects.equals(lesson.getCourse().getProfessor().getId(), principal.id())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorDetailResponse("Only the course owner can generate concepts"));
+                    .body(ApiErrorResponse.forbiddenWithMessage("Only the course owner can generate concepts"));
         }
         if (lesson.getMaterial() == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorDetailResponse("Lesson has no material; attach a material before generating concepts"));
+                    .body(ApiErrorResponse.badRequest("Lesson has no material; attach a material before generating concepts"));
         }
         String fullText = extractFullText(lesson);
         if (!StringUtils.hasText(fullText)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorDetailResponse(
+                    .body(ApiErrorResponse.badRequest(
                             "No text on this material (metadata.full_text is empty). Upload and process a material first."));
         }
         if (fullText.length() > MAX_TEXT_CHARS) {
@@ -162,7 +163,7 @@ public class ConceptController {
     ) {
         requireAuth(principal);
         var lesson = lessonRepository.findByIdWithCourseAndMaterial(lessonId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found"));
+                .orElseThrow(() -> new NoSuchElementException("Lesson not found: " + lessonId));
         if (!canViewCourse(principal, lesson.getCourse())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }

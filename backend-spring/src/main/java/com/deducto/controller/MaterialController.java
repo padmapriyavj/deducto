@@ -1,11 +1,12 @@
 package com.deducto.controller;
 
-import com.deducto.dto.auth.ErrorDetailResponse;
+import com.deducto.dto.api.ApiErrorResponse;
 import com.deducto.dto.material.MaterialResponse;
 import com.deducto.entity.Course;
 import com.deducto.entity.UserRole;
 import com.deducto.repository.CourseRepository;
 import com.deducto.repository.EnrollmentRepository;
+import com.deducto.repository.LessonRepository;
 import com.deducto.repository.MaterialRepository;
 import com.deducto.security.UserPrincipal;
 import com.deducto.service.MaterialIngestionService;
@@ -24,6 +25,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Objects;
 
 @RestController
@@ -32,17 +35,20 @@ public class MaterialController {
     private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final MaterialRepository materialRepository;
+    private final LessonRepository lessonRepository;
     private final MaterialIngestionService materialIngestionService;
 
     public MaterialController(
             CourseRepository courseRepository,
             EnrollmentRepository enrollmentRepository,
             MaterialRepository materialRepository,
+            LessonRepository lessonRepository,
             MaterialIngestionService materialIngestionService
     ) {
         this.courseRepository = courseRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.materialRepository = materialRepository;
+        this.lessonRepository = lessonRepository;
         this.materialIngestionService = materialIngestionService;
     }
 
@@ -51,33 +57,37 @@ public class MaterialController {
             @PathVariable("courseId") long courseId,
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "lesson_id", required = false) Long lessonId,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         requireAuth(principal);
         if (principal.role() != UserRole.professor) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorDetailResponse("Professor access required"));
+                    .body(ApiErrorResponse.forbiddenWithMessage("Professor access required"));
         }
         var course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+                .orElseThrow(() -> new NoSuchElementException("Course not found: " + courseId));
         if (!Objects.equals(course.getProfessor().getId(), principal.id())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorDetailResponse("Only the course owner can upload materials"));
+                    .body(ApiErrorResponse.forbiddenWithMessage("Only the course owner can upload materials"));
         }
         if (file == null || file.isEmpty()) {
-            return ResponseEntity.badRequest().body(new ErrorDetailResponse("file is required"));
+            return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest("file is required"));
         }
         try {
             MaterialResponse body = materialIngestionService.createForCourse(course, file, description);
+            if (lessonId != null) {
+                linkMaterialToLesson(courseId, principal, lessonId, body.id());
+            }
             return ResponseEntity.status(HttpStatus.CREATED).body(body);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(new ErrorDetailResponse(e.getMessage()));
+            return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(e.getMessage()));
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorDetailResponse("Could not read upload: " + e.getMessage()));
+                    .body(ApiErrorResponse.ofStatus("Internal server error", "Could not read upload: " + e.getMessage()));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(new ErrorDetailResponse(e.getMessage()));
+                    .body(ApiErrorResponse.serviceUnavailable(e.getMessage()));
         }
     }
 
@@ -88,7 +98,7 @@ public class MaterialController {
     ) {
         requireAuth(principal);
         var course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+                .orElseThrow(() -> new NoSuchElementException("Course not found: " + courseId));
         if (!canViewCourse(principal, course)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
@@ -103,7 +113,7 @@ public class MaterialController {
     ) {
         requireAuth(principal);
         var material = materialRepository.findByIdWithCourse(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Material not found"));
+                .orElseThrow(() -> new NoSuchElementException("Material not found: " + id));
         if (!canViewCourse(principal, material.getCourse())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
@@ -121,12 +131,41 @@ public class MaterialController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Professor access required");
         }
         var material = materialRepository.findByIdWithCourse(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Material not found"));
+                .orElseThrow(() -> new NoSuchElementException("Material not found: " + id));
         var course = material.getCourse();
         if (!Objects.equals(course.getProfessor().getId(), principal.id())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the course owner can delete materials");
         }
         materialIngestionService.deleteMaterialById(id);
+    }
+
+    /**
+     * After upload, attach the new material row to a lesson in the same course (same as PATCH lesson
+     * with material_id; used by the create-lesson flow with ?lesson_id= on multipart upload).
+     */
+    private void linkMaterialToLesson(
+            long courseId,
+            UserPrincipal principal,
+            long lessonId,
+            long newMaterialId
+    ) {
+        var lesson = lessonRepository.findByIdWithCourseAndMaterial(lessonId)
+                .orElseThrow(() -> new NoSuchElementException("Lesson not found: " + lessonId));
+        if (!Objects.equals(lesson.getCourse().getId(), courseId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Lesson does not belong to this course");
+        }
+        if (!Objects.equals(lesson.getCourse().getProfessor().getId(), principal.id())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the course owner can link materials");
+        }
+        var mat = materialRepository.findByIdWithCourse(newMaterialId)
+                .orElseThrow(() -> new NoSuchElementException("Material not found: " + newMaterialId));
+        if (!Objects.equals(mat.getCourse().getId(), courseId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Material does not belong to this course");
+        }
+        lesson.setMaterial(materialRepository.getReferenceById(newMaterialId));
+        lessonRepository.saveAndFlush(lesson);
     }
 
     private static void requireAuth(UserPrincipal principal) {

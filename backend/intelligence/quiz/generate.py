@@ -6,6 +6,7 @@ import random
 from decimal import Decimal
 from typing import Any
 
+from intelligence.llm.openai_compat import default_llm_model
 from intelligence.quiz.chunk_source import load_chunk_text_for_lessons
 from intelligence.quiz.openai_client import build_generation_metadata, generate_mcq_batch
 from intelligence.quiz.repository import (
@@ -75,14 +76,15 @@ def generate_quiz(req: QuizGenerateRequest, created_by: int, *, rng_seed: int | 
 
     rng = random.Random(rng_seed) if rng_seed is not None else random.Random()
     allocations = _allocate_slots(cfg, rng)
+    llm_model = default_llm_model()
     drafts = generate_mcq_batch(
         context_text=context,
         concept_specs=concept_specs,
         allocations=allocations,
-        model="gemma-3-4b-it"
+        model=llm_model,
     )
 
-    meta = build_generation_metadata("gemma-3-4b-it", seed=str(rng_seed) if rng_seed is not None else None)
+    meta = build_generation_metadata(llm_model, seed=str(rng_seed) if rng_seed is not None else None)
     duration_sec = cfg.num_questions * cfg.time_per_question
     lesson_id = lesson_ids[0]
 

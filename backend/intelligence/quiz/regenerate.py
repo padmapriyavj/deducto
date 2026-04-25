@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from intelligence.llm.openai_compat import default_llm_model
 from intelligence.quiz.chunk_source import load_chunk_text_for_lessons
 from intelligence.quiz.openai_client import build_generation_metadata, regenerate_single_mcq
 from intelligence.quiz.repository import (
@@ -60,7 +61,7 @@ def regenerate_question(
         previous_question_text=str(qrow.get("text") or ""),
     )
 
-    meta = build_generation_metadata("gemma-3-4b-it")
+    meta = build_generation_metadata(default_llm_model())
     update_question_row(
         question_id,
         {

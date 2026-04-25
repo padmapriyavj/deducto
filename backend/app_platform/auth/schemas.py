@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -38,5 +40,5 @@ class AuthResponse(BaseModel):
 
 
 class UserUpdateBody(BaseModel):
-    display_name: str | None = None
-    avatar_config: dict[str, Any] | None = None
+    display_name: Optional[str] = None
+    avatar_config: Optional[dict[str, Any]] = None
