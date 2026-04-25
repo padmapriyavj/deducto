@@ -1,7 +1,7 @@
 # 🦊 Deducto
 
 <p align="center">
-  <img src="./frontend/public/mascot/mascot.png" height="200" />
+  <img src="./frontend/public/mascot/mascot.png" height="200" alt="Finn the Fox" />
 </p>
 
 <p align="center">An AI-powered learning platform that turns real coursework into a daily habit loop.</p>
@@ -12,7 +12,7 @@ Deducto helps professors publish high-quality lesson-aligned quizzes fast, and h
 
 ## Why This Project Exists
 
-Most LMS tools are functional but not habit-forming. Deductible combines:
+Most LMS tools are functional but not habit-forming. Deducto combines:
 
 - Real class content and lesson workflows
 - AI concept extraction and quiz generation
@@ -20,6 +20,21 @@ Most LMS tools are functional but not habit-forming. Deductible combines:
 - A voice-first mascot experience (Finn) to make studying feel alive
 
 The result is an education product designed for retention, not just administration.
+
+---
+
+## Architecture (hybrid)
+
+The app is split between **two backends** behind a single **Nginx** entry (recommended: port 80, via Docker; see `docker-compose.yml`):
+
+| Layer | Role |
+| --- | --- |
+| **Nginx** | One browser origin for `/api/v1` and `/socket.io`; CORS to the Vite app |
+| **Spring Boot** (host `:8080`) | Auth, courses, lessons, materials, concepts, shop, dashboard, leaderboard, `me` — JPA/PostgreSQL (e.g. Supabase Postgres) |
+| **FastAPI** (host `:8000`) | Quizzes, attempts, tempos, practice, scoring, and **Socket.IO** realtime; Supabase/PostgREST where applicable |
+
+- **JWT:** Use the same `JWT_SECRET_KEY` in both `backend-spring` and `backend` when running hybrid so tokens work across both services.
+- **Local dev** can point the frontend at Nginx (`VITE_API_BASE_URL=http://localhost/api/v1`, `VITE_WS_BASE_URL=http://localhost`) or at FastAPI only for narrower debugging — see `frontend/.env.example`.
 
 ---
 
@@ -50,11 +65,12 @@ The result is an education product designed for retention, not just administrati
 ### Platform Capabilities
 
 - JWT auth with role-based route protection
-- FastAPI REST APIs (`/api/v1/...`)
+- Spring Boot APIs for course lifecycle, materials, and gamification data
+- FastAPI for engagement APIs under `/api/v1/...` and realtime
 - Realtime quiz room over Socket.IO
 - AI integration for concept and quiz generation
 - Scoring engine tied to streak + coins
-- Supabase-backed data access
+- Database access via Spring JPA and/or Supabase client (depending on service)
 
 ---
 
@@ -66,7 +82,7 @@ The result is an education product designed for retention, not just administrati
 - **Finn voice UX:** voice responses and readouts for emotionally engaging study interactions.
 - **Gamified persistence loop:** coins + streaks + shop + personal Space encourage return behavior.
 - **Professor AI workflow:** from raw lesson content to reviewable quiz drafts quickly.
-- **Realtime architecture:** live room events and synchronized quiz progression via Socket.IO.
+- **Realtime architecture:** live room events and synchronized quiz progression via Socket.IO (FastAPI).
 
 ---
 
@@ -83,54 +99,47 @@ The result is an education product designed for retention, not just administrati
 - `socket.io-client`
 - ElevenLabs client + Howler + canvas-confetti
 
-### Backend
+### Backends
 
-- FastAPI + Uvicorn
-- Supabase Python client
-- Pydantic v2
-- JWT auth (`python-jose`) + password hashing (`passlib`/`bcrypt`)
-- `python-socketio` for realtime rooms
-- `boto3` for file storage integration
-- OpenAI-compatible LLM client utilities
-- PyMuPDF + python-pptx for document extraction
+- **Spring Boot 3** (Java 21), Spring Security, Spring Data JPA, PostgreSQL
+- **FastAPI** + Uvicorn
+- Supabase Python client (FastAPI paths)
+- Pydantic v2, JWT (`python-jose`), `python-socketio`, `boto3`, OpenAI-compatible LLM utilities
+- PyMuPDF + python-pptx for document extraction (Python pipeline)
 
-### Supporting Tooling
+### Gateway & ops
 
-- OpenAPI -> TypeScript generation (`openapi-typescript`)
-- Pytest test suite for key backend modules
+- Nginx (Docker) — `docker-compose.yml` + `nginx/`
+- OpenAPI → TypeScript generation (`openapi-typescript`) against FastAPI where applicable
+- Pytest for key FastAPI modules
 
 ---
 
-## Repository Structure
+## Repository structure
 
 ```text
 deducto/
-├── frontend/                  # React + Vite web app
-│   ├── src/routes/            # Student and professor pages
-│   ├── src/components/        # UI building blocks + Finn UI
-│   ├── src/lib/               # API clients, voice, realtime, utilities
-│   └── scripts/generate-api.mjs
-├── backend/                   # FastAPI + realtime + intelligence services
-    ├── app_platform/          # Auth, courses, lessons, materials, dashboard, shop
-    ├── intelligence/          # LLM adapters, concepts, quiz, ingestion, betcha
-    ├── engagement/            # Tempo, duels, scoring, realtime Socket.IO
-    ├── tests/                 # Backend tests
-    └── main.py                # ASGI entry (FastAPI + Socket.IO mount)
-
+├── frontend/                 # React + Vite web app
+├── backend/                 # FastAPI + Socket.IO + engagement + intelligence
+├── backend-spring/         # Spring Boot (hybrid API surface)
+├── nginx/                   # Nginx config (e.g. gateway for Docker)
+├── docker-compose.yml      # Nginx gateway → host Spring + FastAPI
+└── Deducto-SpringBoot-Implementation-PRD-v2.md
 ```
 
 ---
 
-## Local Development Setup
+## Local development
 
 ### Prerequisites
 
 - Node.js 20+
-- Python 3.11+ (recommended)
-- `npm` and `pip`
-- A Supabase project (URL + key)
+- Python 3.11+
+- Java 21+ (for Spring) — see `backend-spring/README.md`
+- `npm` / `pip`
+- PostgreSQL (e.g. Supabase) and credentials for Spring; Supabase project for FastAPI as documented in each backend
 
-### 1) Backend
+### 1) FastAPI (`backend/`)
 
 ```bash
 cd backend
@@ -140,72 +149,67 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-Backend health endpoint:
+- Health: `GET http://127.0.0.1:8000/health`
 
-- `GET http://127.0.0.1:8000/health`
+### 2) Spring Boot (`backend-spring/`)
 
-### 2) Frontend
+See **[backend-spring/README.md](backend-spring/README.md)** for `.env` variables, `./mvnw spring-boot:run`, and which routes Spring owns.
+
+- Health: `GET http://127.0.0.1:8080/health`
+
+### 3) Nginx gateway (optional, full hybrid)
+
+With Spring on `8080` and FastAPI on `8000`:
+
+```bash
+docker compose up gateway
+```
+
+`CORS_ORIGIN` should match the frontend origin (default in compose: `http://localhost:5173`).
+
+### 4) Frontend (`frontend/`)
 
 ```bash
 cd frontend
 npm install
+cp .env.example .env   # or .env.local
 npm run dev
 ```
 
-Frontend typically runs on:
-
-- `http://127.0.0.1:5173`
+For the hybrid single-origin setup, set `VITE_API_BASE_URL` and `VITE_WS_BASE_URL` as in `frontend/.env.example`.
 
 ---
 
-## Environment Variables
+## Environment variables
 
-### Frontend (`frontend/.env.local`)
+### Frontend
 
-Start from `frontend/.env.example`.
+Copy from `frontend/.env.example` into `.env` or `.env.local`. Key entries:
 
-Key variables:
+- `VITE_API_BASE_URL` — e.g. `http://localhost/api/v1` (Nginx) or `http://127.0.0.1:8000` (FastAPI only)
+- `VITE_WS_BASE_URL` — Socket.IO origin (often `http://localhost` with Nginx)
+- ElevenLabs and optional OpenAPI URL for `npm run generate:api` — see the example file
 
-- `VITE_API_BASE_URL` (FastAPI base URL)
-- `VITE_WS_BASE_URL` (optional realtime base override)
-- `VITE_OPENAPI_URL` (optional live OpenAPI URL for type generation)
-- `VITE_AUTH_MOCK` (force UI mock auth behavior)
-- `VITE_ELEVENLABS_API_KEY`
-- `VITE_ELEVENLABS_VOICE_ID`
-- `VITE_ELEVENLABS_TTS_SPEED`
-- `VITE_ELEVENLABS_AGENT_ID`
-- `VITE_FINN_GREETING_AUDIO_URL`
-- `VITE_VOICE_CACHE_*` (optional cache URLs for static Finn lines)
+### Backend (FastAPI) — `backend/.env`
 
-### Backend (`backend/.env`)
+- `SUPABASE_URL`, `SUPABASE_KEY`, `JWT_SECRET_KEY` (match Spring in hybrid)
+- `OPENAI_API_KEY`, `LLM_MODEL`, optional `AWS_*` / `S3_BUCKET_NAME`, etc.
 
-- `SUPABASE_URL`
-- `SUPABASE_KEY`
-- `JWT_SECRET_KEY`
-- `OPENAI_API_KEY` (or compatible provider key)
-- `OPENAI_BASE_URL` (optional custom endpoint)
-- `GEMINI_API_KEY` (optional, if using Gemini mode)
-- `LLM_MODEL`
-- `LLM_JSON_SCHEMA`
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `AWS_REGION`
-- `S3_BUCKET_NAME`
+### Backend (Spring) — `backend-spring/`
+
+- `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET_KEY`, S3 and LLM vars as in `backend-spring/.env.example`
 
 ---
 
-## API and Realtime Notes
+## API and realtime
 
-- REST APIs are mounted under `/api/v1`
-- Auth routes: `/api/v1/auth/*`
-- Course routes: `/api/v1/courses/*`
-- Engagement routes include scoring, tempo, duel, realtime docs
-- Socket.IO is mounted at `/socket.io/`
-- Quiz room namespace on frontend: `/quiz-room`
+- **Route ownership** is split: auth/courses/lessons/materials/shop/dashboard/leaderboard/me are implemented in Spring; quizzes, tempos, practice, scoring, and Socket.IO stay in FastAPI. Use Nginx in front for one `/api/v1` URL in the browser, or call each service on its port during local debugging.
+- REST under `/api/v1` (prefix depends on which service handles the path).
+- Socket.IO is mounted on the FastAPI app; path `/socket.io/`.
 
 ---
 
-## Development Commands
+## Development commands
 
 ### Frontend
 
@@ -218,26 +222,30 @@ npm run typecheck
 npm run generate:api
 ```
 
-### Backend
+### Backend (FastAPI)
 
 ```bash
 cd backend
 pytest
 ```
 
-Current backend tests include modules for concepts, quiz generation, scoring rules, realtime session behavior, tempo validation, and betcha logic.
+### Spring
+
+```bash
+cd backend-spring
+./mvnw -q test
+```
 
 ---
 
 ## Demo
 
-<!-- YOUTUBE LINK HERE  -->
+<!-- Add YouTube or hosted demo link. -->
 
-
-## What Makes This Submission Strong
+## What makes this project strong
 
 - Clear product thesis: retention mechanics applied to real coursework
 - Full-stack execution with student and professor workflows
 - AI integrated into meaningful educator workflows (not a standalone chatbot)
-- Realtime and voice interactions that improve demo memorability
-- Extensible architecture for post-hackathon scaling
+- Realtime and voice interactions for memorable demos
+- Extensible split-backend architecture (Spring for transactional API surface, FastAPI for engagement and realtime)
